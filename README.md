@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🏠 Real Estate Lead Triage System
 
 ![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react)
@@ -284,3 +285,7 @@ MIT License - feel free to use this project for your own purposes.
 ---
 
 **Built with ❤️ for Real Estate Professionals**
+=======
+# -Real-Estate-Lead-Triage-System
+An AI-powered lead scoring and triage system for real estate professionals. Automatically score, classify, and prioritize incoming leads using rule-based scoring and LLM-powered intent analysis.
+>>>>>>> d31243baaba75598d041c3bad5d145fef6767d05
