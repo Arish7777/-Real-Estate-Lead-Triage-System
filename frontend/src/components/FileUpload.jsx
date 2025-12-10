@@ -1,9 +1,24 @@
-import React, { useRef, useState } from 'react';
-import { Upload, FileText, CheckCircle, CloudUpload } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Upload, FileText, CheckCircle, CloudUpload, Clock } from 'lucide-react';
 
 const FileUpload = ({ uploading, onUpload }) => {
     const fileInputRef = useRef(null);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    // Timer effect - counts seconds while uploading
+    useEffect(() => {
+        let interval;
+        if (uploading) {
+            setElapsedTime(0);
+            interval = setInterval(() => {
+                setElapsedTime(prev => prev + 1);
+            }, 1000);
+        } else {
+            setElapsedTime(0);
+        }
+        return () => clearInterval(interval);
+    }, [uploading]);
 
     const handleDrop = (e) => {
         e.preventDefault();
@@ -81,10 +96,27 @@ const FileUpload = ({ uploading, onUpload }) => {
                         style={{ width: '60px', height: '60px', borderWidth: '4px' }}
                     />
                     <p className="h5 text-white fw-bold mb-2">Processing Leads...</p>
-                    <p className="text-muted small mb-0">AI is analyzing your data</p>
+                    <p className="text-muted small mb-2">AI is analyzing your data</p>
+
+                    {/* Timer display */}
+                    <div
+                        className="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-3"
+                        style={{
+                            background: 'rgba(59, 130, 246, 0.15)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)'
+                        }}
+                    >
+                        <Clock size={16} className="text-primary" />
+                        <span className="text-white fw-semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {elapsedTime < 60
+                                ? `${elapsedTime}s`
+                                : `${Math.floor(elapsedTime / 60)}m ${elapsedTime % 60}s`
+                            }
+                        </span>
+                    </div>
 
                     {/* Progress dots */}
-                    <div className="d-flex justify-content-center gap-2 mt-4">
+                    <div className="d-flex justify-content-center gap-2 mt-2">
                         {[0, 1, 2].map(i => (
                             <div
                                 key={i}

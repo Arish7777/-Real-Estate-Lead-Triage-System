@@ -7,9 +7,16 @@ import uvicorn
 import asyncio
 import json
 
-from leads_loader import load_leads_from_csv
-from scoring import calculate_score
-from ai_intent import analyze_intent
+try:
+    # When running from root directory: uvicorn backend.app:app
+    from backend.leads_loader import load_leads_from_csv
+    from backend.scoring import calculate_score
+    from backend.ai_intent import analyze_intents_parallel
+except ImportError:
+    # When running from backend directory: uvicorn app:app
+    from leads_loader import load_leads_from_csv
+    from scoring import calculate_score
+    from ai_intent import analyze_intents_parallel
 
 app = FastAPI(title="Real Estate Lead Triage System")
 
@@ -41,22 +48,22 @@ async def process_leads(file: UploadFile = File(...)):
     content = await file.read()
     leads_data = load_leads_from_csv(content)
     
+    # Calculate scores for all leads (fast, no API calls)
+    score_results = [calculate_score(lead) for lead in leads_data]
+    
+    # Analyze intents in PARALLEL for maximum speed
+    # This makes all LLM API calls concurrently instead of sequentially
+    intent_results = await analyze_intents_parallel(leads_data)
+    
+    # Combine results
     new_processed = []
+    base_id = len(processed_leads)
     
-    # Process each lead
-    # Note: In a real app, we might want to do this asynchronously or in background tasks if many leads
-    # For this demo, we'll do it sequentially but maybe limit concurrency if needed.
-    # Since we need to call LLM, it might be slow.
-    
-    for idx, lead in enumerate(leads_data):
-        # Scoring
-        score_result = calculate_score(lead)
-        
-        # AI Intent
-        intent_result = analyze_intent(lead)
-        
+    for idx, (lead, score_result, intent_result) in enumerate(
+        zip(leads_data, score_results, intent_results)
+    ):
         processed_lead = {
-            "id": len(processed_leads) + len(new_processed) + 1,
+            "id": base_id + idx + 1,
             "data": lead,
             "score": score_result["score"],
             "tier": score_result["tier"],

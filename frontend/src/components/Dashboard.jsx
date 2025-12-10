@@ -5,20 +5,12 @@ import LeadTable from './LeadTable';
 import HotLeadsPanel from './HotLeadsPanel';
 import ScoringRulesPanel from './ScoringRulesPanel';
 import FileUpload from './FileUpload';
-import { Users, Flame, Clock, Archive, RefreshCw, Trash2 } from 'lucide-react';
+import { Users, Flame, Clock, Archive, Trash2 } from 'lucide-react';
 
 const Dashboard = ({ leads, report, onRefresh, uploading, onUpload, onViewDetail, onClear, onViewAll }) => {
-    const [isRefreshing, setIsRefreshing] = React.useState(false);
-
     const hotCount = leads.filter(l => l.tier === 'HOT').length;
     const mediumCount = leads.filter(l => l.tier === 'MEDIUM').length;
     const lowCount = leads.filter(l => l.tier === 'LOW').length;
-
-    const handleRefresh = async () => {
-        setIsRefreshing(true);
-        await onRefresh();
-        setTimeout(() => setIsRefreshing(false), 500);
-    };
 
     return (
         <div className="row">
@@ -26,14 +18,6 @@ const Dashboard = ({ leads, report, onRefresh, uploading, onUpload, onViewDetail
             <div className="col-12 mb-4 d-flex justify-content-between align-items-center">
                 <h2 className="fw-bold mb-0 text-dark">Dashboard</h2>
                 <div className="d-flex gap-2">
-                    <button
-                        className={`btn btn-outline-secondary d-flex align-items-center gap-2 ${isRefreshing ? 'disabled' : ''}`}
-                        onClick={handleRefresh}
-                        disabled={isRefreshing}
-                    >
-                        <RefreshCw size={16} className={isRefreshing ? 'spin' : ''} />
-                        {isRefreshing ? 'Refreshing...' : 'Refresh'}
-                    </button>
                     {leads.length > 0 && (
                         <button
                             className="btn btn-outline-danger d-flex align-items-center gap-2"

@@ -2,13 +2,18 @@
 
 import json
 import os
-from typing import Dict, Any, Optional
+import asyncio
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from config import Config
+try:
+    from backend.config import Config
+except ImportError:
+    from config import Config
 
 
 @dataclass
@@ -156,28 +161,77 @@ class IntentAnalyzer:
         
         user_prompt = self._format_lead_prompt(lead)
         return self._call_llm(user_prompt)
+    
+    async def analyze_lead_async(self, lead: Dict[str, Any]) -> IntentResult:
+        """Async version of analyze_lead using ThreadPoolExecutor."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.analyze_lead, lead)
+    
+    async def analyze_leads_batch(self, leads: List[Dict[str, Any]]) -> List[IntentResult]:
+        """
+        Analyze multiple leads concurrently for maximum throughput.
+        
+        Args:
+            leads: List of lead dictionaries
+            
+        Returns:
+            List of IntentResult objects in the same order as input
+        """
+        tasks = [self.analyze_lead_async(lead) for lead in leads]
+        return await asyncio.gather(*tasks)
 
 
-# Convenience function for simple usage
+# Singleton instance - reused across all calls to avoid reinitializing
+_analyzer_instance: Optional[IntentAnalyzer] = None
+
+
+def get_analyzer() -> IntentAnalyzer:
+    """Get or create the singleton IntentAnalyzer instance."""
+    global _analyzer_instance
+    if _analyzer_instance is None:
+        _analyzer_instance = IntentAnalyzer()
+    return _analyzer_instance
+
+
+# Convenience function for simple usage (backward compatible)
 def analyze_intent(lead: Dict[str, Any]) -> Dict[str, str]:
     """
     Convenience function for analyzing lead intent.
-    
-    This maintains backward compatibility with the original function signature.
-    
-    Args:
-        lead: Dictionary containing lead information
-        
-    Returns:
-        Dictionary with "intent_label" and "short_reason" keys
+    Uses singleton analyzer to avoid reinitialization overhead.
     """
-    analyzer = IntentAnalyzer()
+    analyzer = get_analyzer()
     result = analyzer.analyze_lead(lead)
     
     return {
         "intent_label": result.intent_label,
         "short_reason": result.short_reason
     }
+
+
+async def analyze_intents_parallel(leads: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    """
+    Analyze multiple leads in parallel for maximum performance.
+    
+    This is the recommended function for batch processing.
+    All LLM calls happen concurrently, reducing total time from
+    N * latency to approximately 1 * latency.
+    
+    Args:
+        leads: List of lead dictionaries
+        
+    Returns:
+        List of dictionaries with "intent_label" and "short_reason" keys
+    """
+    analyzer = get_analyzer()
+    results = await analyzer.analyze_leads_batch(leads)
+    
+    return [
+        {
+            "intent_label": result.intent_label,
+            "short_reason": result.short_reason
+        }
+        for result in results
+    ]
 
 
 if __name__ == "__main__":
